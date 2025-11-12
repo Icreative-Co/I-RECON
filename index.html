@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>ICREATIVE CO — OSINT Dashboard</title>
+
+<!-- Prism for syntax highlighting -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+
+<style>
+  :root {
+    --bg: #000;
+    --panel: #0a0a0a;
+    --muted: #9aa3ac;
+    --accent: #9cf;
+    --card: #111;
+    --white: #fff;
+    --border: #222;
+    --hover: #1a1a1a;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+    margin: 0;
+    background: var(--bg);
+    color: var(--white);
+    font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
+  }
+
+  .header {
+    height: 64px;
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 22px;
+  }
+
+  .brand {
+    font-weight: 800;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .status {
+    background: var(--white);
+    color: #000;
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-weight: 700;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #000;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: .3; }
+  }
+
+  .container {
+    display: grid;
+    grid-template-columns: 320px 1fr 320px;
+    height: calc(100% - 64px);
+  }
+
+  .left, .right {
+    background: var(--panel);
+    padding: 18px;
+    overflow: auto;
+  }
+
+  .left { border-right: 1px solid var(--border); }
+  .right { border-left: 1px solid var(--border); }
+
+  .search {
+    margin-bottom: 12px;
+  }
+
+  .search input {
+    width: 100%;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: #070707;
+    color: var(--white);
+    outline: none;
+  }
+
+  .tool-group {
+    margin-bottom: 18px;
+  }
+
+  .tool-group h3 {
+    color: var(--muted);
+    font-size: 12px;
+    margin: 0 0 8px 0;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+  }
+
+  .tool-card {
+    background: var(--card);
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: transform .12s, background .12s;
+  }
+
+  .tool-card:hover {
+    transform: translateX(4px);
+    background: var(--hover);
+  }
+
+  .tool-name {
+    font-weight: 700;
+  }
+
+  .tool-desc {
+    color: var(--muted);
+    font-size: 13px;
+    margin-top: 6px;
+  }
+
+  .drag-row {
+    margin-top: 8px;
+  }
+
+  .drag-btn {
+    display: inline-block;
+    background: var(--white);
+    color: #000;
+    padding: 6px 10px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 13px;
+    border: 1px solid #ccc;
+  }
+
+  .main {
+    padding: 22px;
+    overflow: auto;
+  }
+
+  .main h2 {
+    margin-top: 0;
+    font-size: 18px;
+    letter-spacing: 1px;
+  }
+
+  .info {
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+
+  .code-actions {
+    margin-top: 12px;
+    margin-bottom: 12px;
+  }
+
+  button {
+    background: var(--white);
+    color: #000;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-right: 8px;
+  }
+
+  button.ghost {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+
+  pre.code-block {
+    background: #0d0d0d;
+    padding: 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    overflow: auto;
+  }
+
+  textarea#editor {
+    width: 100%;
+    height: 320px;
+    background: #060606;
+    color: var(--white);
+    border: 1px solid var(--border);
+    padding: 12px;
+    border-radius: 8px;
+    font-family: monospace;
+    resize: vertical;
+  }
+
+  .meta {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  .quicklinks ul {
+    list-style: none;
+    padding-left: 0;
+    margin: 0;
+  }
+
+  .quicklinks li {
+    padding: 8px 0;
+    border-bottom: 1px dashed #151515;
+    color: var(--muted);
+  }
+
+  footer {
+    background: #0b0b0b;
+    padding: 12px 18px;
+    border-top: 1px solid var(--card);
+    color: var(--muted);
+    text-align: center;
+    font-size: 13px;
+  }
+
+  .note {
+    background: #0b0b0b;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #151515;
+    color: var(--muted);
+    margin-top: 8px;
+  }
+
+  .small {
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  @media (max-width: 1200px) {
+    .container {
+      grid-template-columns: 280px 1fr;
+    }
+    .right {
+      display: none;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .container {
+      grid-template-columns: 1fr;
+    }
+    .left {
+      border-right: none;
+    }
+  }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="brand">ICREATIVE CO OSINT</div>
+  <div style="display:flex;gap:14px;align-items:center">
+    <div class="small">Quick Links</div>
+    <div class="status">
+      <div class="status-dot"></div> ONLINE
+    </div>
+  </div>
+</header>
+
+<div class="container">
+  <!-- LEFT: TOOLS -->
+  <aside class="left">
+    <div class="search">
+      <input id="search" placeholder="Search tools (e.g. BandLab, FB, JSON)">
+    </div>
+
+    <div id="toolsList"></div>
+  </aside>
+
+  <!-- MAIN: TOOL INFO / CODE / EDITOR -->
+  <main class="main" id="main">
+    <h2>Welcome — ICREATIVE CO OSINT Dashboard</h2>
+    <div class="info">Click any tool on the left to view its description and full bookmarklet code. Drag the white "Drag" button to your bookmarks bar to install a tool as a bookmarklet.</div>
+
+    <div id="toolArea">
+      <div class="note">
+        <strong>How to use:</strong>
+        <ol>
+          <li>Drag the white bookmark button for a tool into your browser bookmarks bar.</li>
+          <li>While on a target site, click your saved bookmark to run the script locally in the page context.</li>
+          <li>Click <em>Edit</em> to modify the code and then <em>Save</em> to download a `.js` file of your modified script.</li>
+        </ol>
+      </div>
+    </div>
+  </main>
+
+  <!-- RIGHT: QUICK LINKS & ABOUT -->
+  <aside class="right">
+    <div class="meta">
+      <div>
+        <div style="font-weight:800">Quick Links</div>
+        <div class="small">Documentation · Tool Updates · Settings · Support</div>
+      </div>
+    </div>
+
+    <div class="quicklinks" style="margin-top:12px">
+      <ul>
+        <li>Documentation</li>
+        <li>Tool Updates</li>
+        <li>Settings</li>
+        <li>Support</li>
+      </ul>
+    </div>
+
+    <div style="margin-top:18px" class="note">
+      <strong>About OSINT & Privacy</strong>
+      <p class="small">ICREATIVE CO curates scripts that operate on publicly available data. Scripts run locally in your browser, do not require credentials, and are intended for ethical research and security testing. Respect privacy and applicable laws.</p>
+    </div>
+  </aside>
+</div>
+
+<footer>ICREATIVE CO — OSINT Dashboard • Use responsibly. ©</footer>
+
+<script>
+// ==================== DATA STRUCTURE ====================
+const TOOLS_DATA = [
+  {
+    category: 'Music & Social',
+    tools: [
+      {
+        key: 'bandlab',
+        name: 'TrackSniffer (BandLab)',
+        desc: 'Open BandLab discover or extract profile metadata. Drag to bookmarks to run while on BandLab pages.',
+        code: `javascript:(function(){const url=window.location.href;const username=url.split('/').pop();if(!username){alert('Invalid BandLab profile URL.');return}fetch(\`https://www.bandlab.com/api/v1.3/users/\${username}\`).then(response=>{if(!response.ok){throw new Error('Network response was not ok')}return response.json()}).then(data=>{const modal=document.createElement('div');modal.style.position='fixed';modal.style.top='50%';modal.style.left='50%';modal.style.transform='translate(-50%, -50%)';modal.style.backgroundColor='#333';modal.style.color='#fff';modal.style.padding='20px';modal.style.border='2px solid #fff';modal.style.borderRadius='10px';modal.style.zIndex='10000';modal.style.maxWidth='80%';modal.style.textAlign='left';modal.style.fontFamily='Arial, sans-serif';modal.style.cursor='move';const content=document.createElement('div');content.style.fontFamily='Arial, sans-serif';content.style.marginTop='30px';let linksHtml='';if(data.links&&Object.keys(data.links).length>0){linksHtml='<p><strong>Links:</strong></p>';for(const[key,value]of Object.entries(data.links)){const linkName=key.charAt(0).toUpperCase()+key.slice(1);linksHtml+=\`<p style="margin-left:20px;">\${linkName}: <a href="\${value}" target="_blank" style="color:#9cf;font-family:Courier New,monospace;font-weight:bold;">\${value}</a></p>\`}}content.innerHTML=\`<h3 style="margin-top:0;color:#fff;">BandLab User Information</h3><p>Username: <strong style="font-family:Courier New,monospace;">\${username}</strong></p><p>Display Name: <strong style="font-family:Courier New,monospace;">\${data.name}</strong></p><p>ID: <strong style="font-family:Courier New,monospace;">\${data.id}</strong></p><p>Created On: <strong style="font-family:Courier New,monospace;">\${new Date(data.createdOn).toLocaleString()}</strong></p><p>Modified On: <strong style="font-family:Courier New,monospace;">\${new Date(data.modifiedOn).toLocaleString()}</strong></p>\${linksHtml}\`;modal.appendChild(content);var dragInfo={isDragging:false,offsetX:0,offsetY:0};modal.onmousedown=function(e){if(e.target===closeBtn||e.target.tagName==='A')return;dragInfo.isDragging=true;dragInfo.offsetX=e.clientX-modal.offsetLeft;dragInfo.offsetY=e.clientY-modal.offsetTop;modal.style.transform='none'};document.onmousemove=function(e){if(dragInfo.isDragging){modal.style.left=e.clientX-dragInfo.offsetX+'px';modal.style.top=e.clientY-dragInfo.offsetY+'px'}};document.onmouseup=function(){dragInfo.isDragging=false};var closeBtn=document.createElement('button');closeBtn.innerHTML='×';closeBtn.style.position='absolute';closeBtn.style.top='5px';closeBtn.style.right='10px';closeBtn.style.background='none';closeBtn.style.border='none';closeBtn.style.color='#fff';closeBtn.style.fontSize='28px';closeBtn.style.cursor='pointer';closeBtn.style.lineHeight='1';closeBtn.style.padding='0';closeBtn.style.width='30px';closeBtn.style.height='30px';closeBtn.onmouseover=function(){this.style.opacity='0.7'};closeBtn.onmouseout=function(){this.style.opacity='1'};closeBtn.onclick=function(e){e.stopPropagation();document.body.removeChild(modal);document.onmousemove=null;document.onmouseup=null};modal.appendChild(closeBtn);document.body.appendChild(modal)}).catch(error=>{console.error('Error fetching user data:',error);alert('Failed to fetch user data. Please try again later.')})})();`
+      },
+      {
+        key: 'smule',
+        name: 'SingSeeker (Smule)',
+        desc: 'Opens Smule profile API endpoint to fetch public profile details.',
+        code: `javascript:(function(){function getUsernameFromURL(){const path=window.location.pathname;return path.split('/').pop()}function showProfileModal(data){const modal=document.createElement('div');modal.style.position='fixed';modal.style.top='50%';modal.style.left='50%';modal.style.transform='translate(-50%, -50%)';modal.style.backgroundColor='#333';modal.style.color='#fff';modal.style.padding='20px';modal.style.border='2px solid #fff';modal.style.borderRadius='10px';modal.style.zIndex='10000';modal.style.maxWidth='80%';modal.style.textAlign='left';modal.style.fontFamily='Arial, sans-serif';modal.style.cursor='move';const content=document.createElement('div');content.style.fontFamily='Arial, sans-serif';content.style.marginTop='30px';content.innerHTML=\`<h3 style="margin-top:0;color:#fff;">Smule Profile Details</h3><p>Current URL: <a href="\${window.location.href}" target="_blank" style="color:#9cf;font-family:Courier New,monospace;font-weight:bold;">\${window.location.href}</a></p><p>Account ID: <strong style="font-family:Courier New,monospace;">\${data.account_id}</strong></p><p>Username: <strong style="font-family:Courier New,monospace;">\${data.handle}</strong></p><p>Display Name: <strong style="font-family:Courier New,monospace;">\${data.first_name} \${data.last_name}</strong></p><p>Location: <strong style="font-family:Courier New,monospace;">\${data.location||'Not specified'}</strong></p><p>Verified: <strong style="font-family:Courier New,monospace;">\${data.is_verified?\`✅ \${data.verified_type}\`:'❌'}</strong></p><p>Installed Apps: <strong style="font-family:Courier New,monospace;">\${data.installed_apps||'None'}</strong></p>\`;modal.appendChild(content);var dragInfo={isDragging:false,offsetX:0,offsetY:0};modal.onmousedown=function(e){if(e.target===closeBtn||e.target.tagName==='A')return;dragInfo.isDragging=true;dragInfo.offsetX=e.clientX-modal.offsetLeft;dragInfo.offsetY=e.clientY-modal.offsetTop;modal.style.transform='none'};document.onmousemove=function(e){if(dragInfo.isDragging){modal.style.left=e.clientX-dragInfo.offsetX+'px';modal.style.top=e.clientY-dragInfo.offsetY+'px'}};document.onmouseup=function(){dragInfo.isDragging=false};var closeBtn=document.createElement('button');closeBtn.innerHTML='×';closeBtn.style.position='absolute';closeBtn.style.top='5px';closeBtn.style.right='10px';closeBtn.style.background='none';closeBtn.style.border='none';closeBtn.style.color='#fff';closeBtn.style.fontSize='28px';closeBtn.style.cursor='pointer';closeBtn.style.lineHeight='1';closeBtn.style.padding='0';closeBtn.style.width='30px';closeBtn.style.height='30px';closeBtn.onmouseover=function(){this.style.opacity='0.7'};closeBtn.onmouseout=function(){this.style.opacity='1'};closeBtn.onclick=function(e){e.stopPropagation();document.body.removeChild(modal);document.onmousemove=null;document.onmouseup=null};modal.appendChild(closeBtn);document.body.appendChild(modal)}function fetchSmuleProfile(){const username=getUsernameFromURL();fetch(\`https://www.smule.com/api/profile/?handle=\${username}\`).then(response=>response.json()).then(data=>{showProfileModal(data)}).catch(error=>{alert('Error fetching profile: '+error)})}fetchSmuleProfile()})();`
+      },
+      {
+        key: 'snapchat',
+        name: 'SnapHound (Snapchat)',
+        desc: 'Extracts public Snapchat profile fields and timestamps from page JSON.',
+        code: `javascript:(function(){function findProfileInfo(){if('18'==document.documentElement.innerHTML.match(/"pageType":(\\d\\d)/)[1]){var e=document.documentElement.innerHTML.match(/"dateCreated":"(\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z)"/);var o=document.documentElement.innerHTML.match(/"dateModified":"(\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z)"/);var t=e?e[1]:'[Not Present]';var n=o?o[1]:'[Not Present]';var r=document.getElementById('__NEXT_DATA__');var l=JSON.parse(r.text).props.pageProps.userProfile.publicProfileInfo;return{createdDate:t,modifiedDate:n,username:l.username,displayName:l.title?l.title:'[Not Present]',bio:l.bio?l.bio:'[Not Present]',location:l.address?l.address:'[Not Present]',websiteUrl:l.websiteUrl?l.websiteUrl:'[Not Present]'}}return alert('Sorry. This Snapchat user has no public profile.')}var profileInfo=findProfileInfo();if(profileInfo){const modal=document.createElement('div');modal.style.position='fixed';modal.style.top='50%';modal.style.left='50%';modal.style.transform='translate(-50%, -50%)';modal.style.backgroundColor='#333';modal.style.color='#fff';modal.style.padding='20px';modal.style.border='2px solid #fff';modal.style.borderRadius='10px';modal.style.zIndex='10000';modal.style.maxWidth='80%';modal.style.textAlign='left';modal.style.fontFamily='Arial, sans-serif';modal.style.cursor='move';const content=document.createElement('div');content.style.fontFamily='Arial, sans-serif';content.style.marginTop='30px';let websiteHtml='';if(profileInfo.websiteUrl!=='[Not Present]'){websiteHtml=\`<p>Website: <a href="\${profileInfo.websiteUrl}" target="_blank" style="color:#9cf;font-family:Courier New,monospace;font-weight:bold;">\${profileInfo.websiteUrl}</a></p>\`}else{websiteHtml='<p>Website: <strong style="font-family:Courier New,monospace;">[Not Present]</strong></p>'}content.innerHTML=\`<h3 style="margin-top:0;color:#fff;">Snapchat Profile Information</h3><p>Username: <strong style="font-family:Courier New,monospace;">@\${profileInfo.username}</strong></p><p>Display Name: <strong style="font-family:Courier New,monospace;">\${profileInfo.displayName}</strong></p><p>Location: <strong style="font-family:Courier New,monospace;">\${profileInfo.location}</strong></p><p>Bio: <strong style="font-family:Courier New,monospace;">\${profileInfo.bio}</strong></p>\${websiteHtml}<p>Created Timestamp: <strong style="font-family:Courier New,monospace;">\${profileInfo.createdDate}</strong></p><p>Modified Timestamp: <strong style="font-family:Courier New,monospace;">\${profileInfo.modifiedDate}</strong></p><p>Current URL: <a href="\${document.URL}" target="_blank" style="color:#9cf;font-family:Courier New,monospace;font-weight:bold;">\${document.URL}</a></p>\`;modal.appendChild(content);var dragInfo={isDragging:false,offsetX:0,offsetY:0};modal.onmousedown=function(e){if(e.target===closeBtn||e.target.tagName==='A')return;dragInfo.isDragging=true;dragInfo.offsetX=e.clientX-modal.offsetLeft;dragInfo.offsetY=e.clientY-modal.offsetTop;modal.style.transform='none'};document.onmousemove=function(e){if(dragInfo.isDragging){modal.style.left=e.clientX-dragInfo.offsetX+'px';modal.style.top=e.clientY-dragInfo.offsetY+'px'}};document.onmouseup=function(){dragInfo.isDragging=false};var closeBtn=document.createElement('button');closeBtn.innerHTML='×';closeBtn.style.position='absolute';closeBtn.style.top='5px';closeBtn.style.right='10px';closeBtn.style.background='none';closeBtn.style.border='none';closeBtn.style.color='#fff';closeBtn.style.fontSize='28px';closeBtn.style.cursor='pointer';closeBtn.style.lineHeight='1';closeBtn.style.padding='0';closeBtn.style.width='30px';closeBtn.style.height='30px';closeBtn.onmouseover=function(){this.style.opacity='0.7'};closeBtn.onmouseout=function(){this.style.opacity='1'};closeBtn.onclick=function(e){e.stopPropagation();document.body.removeChild(modal);document.onmousemove=null;document.onmouseup=null};modal.appendChild(closeBtn);document.body.appendChild(modal)}})();`
+      }
+    ]
+  },
+  {
+    category: 'Facebook Tools',
+    tools: [
+      {
+        key: 'fbtoolkit',
+        name: 'FaceToolkit (Facebook Profile Toolkit)',
+        desc: 'Comprehensive extractor for Facebook profile: ID, display name, profile image, search & marketplace helpers (drag to bookmarks to run on FB profile pages).',
+        code: `javascript:(function(){try{const html=document.documentElement.outerHTML;const extractUserId=function(){const patterns=[/"userID":"(\\d+)"/,/"entity_id":"(\\d+)"/,/fb:\\/\\/profile\\/(\\d+)/,/facebook\\.com\\/profile\\.php\\?id=(\\d+)/];for(const p of patterns){const m=html.match(p);if(m&&m[1])return m[1]}return null};const extractUserName=function(){const patterns=[/"vanity":"([^"]+)"/,/facebook\\.com\\/([^/?#]+)"/];for(const p of patterns){const m=html.match(p);if(m&&m[1])return m[1]}return location.pathname.split('/').filter(Boolean)[0]||'Unknown'};const extractDisplayName=function(){const patterns=[/"__isProfile":"User","name":"([^"]+)"/,/"name":"([^"]+)","__isEntity":"User"/];for(const p of patterns){const m=html.match(p);if(m&&m[1])return m[1]}const meta=document.querySelector('meta[property="og:title"]');return meta?meta.content:'Not found'};const findProfilePic=function(){try{const scripts=document.querySelectorAll('script');for(let s of scripts){const content=s.textContent;const start=content.indexOf('{');const end=content.lastIndexOf('}')+1;if(start!==-1&&end!==-1){const json=JSON.parse(content.substring(start,end));const findUri=(obj)=>{if(!obj||typeof obj!=='object')return null;for(let k in obj){if(k==='profilePicLarge'&&obj[k]?.uri)return obj[k].uri;const r=findUri(obj[k]);if(r)return r}return null};const uri=findUri(json);if(uri)return uri.replace(/\\\\u0026/g,'&')}}}catch(e){}return null};const userId=extractUserId();const username=extractUserName();const displayName=extractDisplayName();const profilePic=findProfilePic();const profileUrl=location.href;const modal=document.createElement('div');Object.assign(modal.style,{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%, -50%)',background:'rgba(20,20,20,0.95)',color:'#fff',padding:'20px',border:'2px solid #1877f2',borderRadius:'12px',zIndex:'99999',width:'360px',fontFamily:'Segoe UI, sans-serif',cursor:'move',textAlign:'left',boxShadow:'0 0 25px rgba(0,0,0,0.6)'});modal.innerHTML=\`<button id='fbCloseBtn' style='position:absolute;top:5px;right:10px;background:none;border:none;color:#fff;font-size:24px;cursor:pointer;'>×</button><h3 style='margin-top:0;text-align:center;color:#1877f2;'>Facebook Profile Toolkit</h3><hr style='border:1px solid #1877f2;opacity:0.4;margin-bottom:10px;'><p><strong>Name:</strong> <span style='font-family:Courier New;'>\${displayName}</span></p><p><strong>Username:</strong> <span style='font-family:Courier New;'>\${username}</span></p><p><strong>ID:</strong> <span style='font-family:Courier New;'>\${userId||"Not found"}</span></p><p><strong>URL:</strong> <a href='\${profileUrl}' target='_blank' style='color:#9cf;'>\${profileUrl}</a></p>\${profilePic?\`<p><strong>Profile Picture:</strong> <a href='\${profilePic}' target='_blank' style='color:#9cf;'>View / Open</a></p>\`:''}<div style='margin-top:10px;text-align:center;'><button id='searchBtn' style='margin-bottom:5px;background:#1877f2;color:#fff;padding:6px 12px;border-radius:6px;border:none;cursor:pointer;font-weight:bold;'>Search User</button><button id='marketBtn' style='margin-left:5px;background:#42b72a;color:#fff;padding:6px 12px;border-radius:6px;border:none;cursor:pointer;font-weight:bold;'>Open Marketplace</button><button id='copyBtn' style='margin-left:5px;background:#f7b928;color:#fff;padding:6px 12px;border-radius:6px;border:none;cursor:pointer;font-weight:bold;'>Copy Info</button></div>\`;document.body.appendChild(modal);document.getElementById('fbCloseBtn').onclick=e=>{e.stopPropagation();modal.remove();document.onmousemove=null;document.onmouseup=null};document.getElementById('copyBtn').onclick=()=>{const text=\`Name: \${displayName}\\nUsername: \${username}\\nID: \${userId||'Not found'}\\nURL: \${profileUrl}\`;navigator.clipboard.writeText(text).then(()=>alert('Profile info copied!'))};document.getElementById('searchBtn').onclick=()=>{if(!userId){alert('Cannot perform search: User ID not found.');return}const term=prompt('Enter search keyword for this user:');if(term&&term.trim()!==''){const encoded=encodeURIComponent(term.trim());const searchUrl=\`https://facebook.com/profile/\${userId}/search/?q=\${encoded}\`;window.open(searchUrl,'_blank')}};document.getElementById('marketBtn').onclick=()=>{if(!userId){alert('Cannot open Marketplace: User ID not found.');return}const marketUrl=\`https://www.facebook.com/marketplace/?seller_profile=\${userId}\`;window.open(marketUrl,'_blank')};let drag={active:false,x:0,y:0};modal.onmousedown=e=>{if(['BUTTON','A'].includes(e.target.tagName))return;drag.active=true;drag.x=e.clientX-modal.offsetLeft;drag.y=e.clientY-modal.offsetTop;modal.style.transform='none'};document.onmousemove=e=>{if(!drag.active)return;modal.style.left=e.clientX-drag.x+'px';modal.style.top=e.clientY-drag.y+'px'};document.onmouseup=()=>drag.active=false}catch(err){alert('Error: '+err.message)}})();`
+      }
+    ]
+  }
+];
+
+// ==================== UTILITY FUNCTIONS ====================
+const Utils = {
+  escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  },
+
+  encodeBookmarkletHref(code) {
+    let formatted = code.trim();
+    if (!formatted.startsWith('javascript:')) {
+      formatted = 'javascript:' + formatted;
+    }
+    return encodeURI(formatted);
+  },
+
+  downloadFile(filename, content, mimeType = 'application/javascript') {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  },
+
+  copyToClipboard(text) {
+    return navigator.clipboard.writeText(text);
+  }
+};
+
+// ==================== DOM BUILDER ====================
+const DOMBuilder = {
+  createToolCard(tool) {
+    const card = document.createElement('div');
+    card.className = 'tool-card';
+    card.dataset.key = tool.key;
+    
+    card.innerHTML = `
+      <div class="tool-name">${tool.name}</div>
+      <div class="tool-desc">${tool.desc}</div>
+      <div class="drag-row">
+        <a class="drag-btn" 
+           href="${Utils.encodeBookmarkletHref(tool.code)}" 
+           draggable="true" 
+           title="Drag to bookmarks bar">
+          Drag ${tool.name.split('(')[0].trim()}
+        </a>
+      </div>
+    `;
+    
+    return card;
+  },
+
+  createToolGroup(category, tools) {
+    const group = document.createElement('div');
+    group.className = 'tool-group';
+    
+    const header = document.createElement('h3');
+    header.textContent = category;
+    group.appendChild(header);
+    
+    tools.forEach(tool => {
+      group.appendChild(this.createToolCard(tool));
+    });
+    
+    return group;
+  },
+
+  renderToolsList(data) {
+    const container = document.getElementById('toolsList');
+    container.innerHTML = '';
+    
+    data.forEach(section => {
+      container.appendChild(this.createToolGroup(section.category, section.tools));
+    });
+  }
+};
+
+// ==================== TOOL DISPLAY ====================
+const ToolDisplay = {
+  show(tool) {
+    const toolArea = document.getElementById('toolArea');
+    
+    toolArea.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div>
+          <h3 style="margin:0">${tool.name}</h3>
+          <div class="small" style="margin-top:6px;color:var(--muted)">${tool.desc}</div>
+        </div>
+        <div style="text-align:right">
+          <a class="drag-btn" 
+             href="${Utils.encodeBookmarkletHref(tool.code)}" 
+             draggable="true" 
+             title="Drag to bookmarks">
+            Drag ${tool.name.split('(')[0].trim()}
+          </a>
+        </div>
+      </div>
+
+      <div class="code-actions">
+        <button id="editBtn">Edit</button>
+        <button id="downloadBtn">Save as .js</button>
+        <button class="ghost" id="copyBtn">Copy Code</button>
+      </div>
+
+      <div id="codeDisplay">
+        <pre class="code-block"><code id="codeBlock" class="language-javascript">${Utils.escapeHtml(tool.code)}</code></pre>
+      </div>
+
+      <div id="editorArea" style="display:none">
+        <textarea id="editor">${tool.code}</textarea>
+        <div style="margin-top:10px">
+          <button id="saveEdited">Save & Download</button>
+          <button class="ghost" id="cancelEdit">Cancel</button>
+        </div>
+      </div>
+    `;
+
+    // Syntax highlighting
+    if (window.Prism) {
+      Prism.highlightElement(document.getElementById('codeBlock'));
+    }
+
+    this.attachEventListeners(tool);
+  },
+
+  attachEventListeners(tool) {
+    // Edit button
+    document.getElementById('editBtn').addEventListener('click', () => {
+      document.getElementById('editorArea').style.display = 'block';
+      document.getElementById('codeDisplay').style.display = 'none';
+    });
+
+    // Cancel edit
+    document.getElementById('cancelEdit').addEventListener('click', () => {
+      document.getElementById('editorArea').style.display = 'none';
+      document.getElementById('codeDisplay').style.display = 'block';
+    });
+
+    // Copy button
+    document.getElementById('copyBtn').addEventListener('click', async () => {
+      try {
+        await Utils.copyToClipboard(tool.code);
+        alert('Code copied to clipboard!');
+      } catch (err) {
+        alert('Failed to copy code');
+      }
+    });
+
+    // Download button
+    document.getElementById('downloadBtn').addEventListener('click', () => {
+      Utils.downloadFile(`${tool.key}.js`, tool.code);
+    });
+
+    // Save edited
+    document.getElementById('saveEdited').addEventListener('click', () => {
+      const editedCode = document.getElementById('editor').value;
+      Utils.downloadFile(`${tool.key}-edited.js`, editedCode);
+    });
+  }
+};
+
+// ==================== SEARCH FUNCTIONALITY ====================
+const SearchManager = {
+  allTools: [],
+
+  init(toolsData) {
+    this.allTools = toolsData.flatMap(section => 
+      section.tools.map(tool => ({
+        ...tool,
+        category: section.category,
+        element: null
+      }))
+    );
+  },
+
+  filter(query) {
+    const lowerQuery = query.toLowerCase().trim();
+    
+    if (!lowerQuery) {
+      // Show all tools
+      document.querySelectorAll('.tool-card').forEach(card => {
+        card.style.display = '';
+      });
+      document.querySelectorAll('.tool-group').forEach(group => {
+        group.style.display = '';
+      });
+      return;
+    }
+
+    // Filter tools
+    document.querySelectorAll('.tool-card').forEach(card => {
+      const key = card.dataset.key;
+      const tool = this.allTools.find(t => t.key === key);
+      
+      if (!tool) {
+        card.style.display = 'none';
+        return;
+      }
+
+      const matches = 
+        tool.name.toLowerCase().includes(lowerQuery) ||
+        tool.desc.toLowerCase().includes(lowerQuery) ||
+        tool.key.toLowerCase().includes(lowerQuery) ||
+        tool.category.toLowerCase().includes(lowerQuery);
+
+      card.style.display = matches ? '' : 'none';
+    });
+
+    // Hide empty groups
+    document.querySelectorAll('.tool-group').forEach(group => {
+      const visibleCards = group.querySelectorAll('.tool-card[style=""]').length;
+      group.style.display = visibleCards > 0 ? '' : 'none';
+    });
+  }
+};
+
+// ==================== INITIALIZATION ====================
+function init() {
+  // Render tools list
+  DOMBuilder.renderToolsList(TOOLS_DATA);
+
+  // Initialize search
+  SearchManager.init(TOOLS_DATA);
+  
+  const searchInput = document.getElementById('search');
+  searchInput.addEventListener('input', (e) => {
+    SearchManager.filter(e.target.value);
+  });
+
+  // Attach click handlers to tool cards
+  document.querySelectorAll('.tool-card').forEach(card => {
+    card.addEventListener('click', (e) => {
+      // Don't trigger if clicking on drag button
+      if (e.target.tagName === 'A' || e.target.closest('a')) {
+        return;
+      }
+
+      const key = card.dataset.key;
+      const tool = SearchManager.allTools.find(t => t.key === key);
+      
+      if (tool) {
+        ToolDisplay.show(tool);
+      }
+    });
+  });
+
+  // Show first tool by default
+  if (SearchManager.allTools.length > 0) {
+    ToolDisplay.show(SearchManager.allTools[0]);
+  }
+}
+
+// Start the application
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
+</script>
+</body>
+</html>
